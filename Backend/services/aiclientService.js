@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import axios from "axios";
 
 let openaiClient = null;
 
@@ -10,19 +11,33 @@ function getOpenAI() {
   return openaiClient;
 }
 
-export const askRagQuestion = async (sessionId, question) => {
-  const openai = getOpenAI();
-  if (!openai) {
-    throw new Error('OPENAI_API_KEY not set. Set the environment variable or provide a .env file.');
+export const askRagQuestion = async (sessionId, question, videoId = null) => {
+  try {
+    // Call the AI services RAG chat endpoint
+    const response = await axios.post('http://localhost:8000/chat', {
+      video_id: videoId,
+      question: question,
+      language: 'en'
+    });
+
+    return { answer: response.data.answer };
+  } catch (error) {
+    console.error('RAG chat error:', error.message);
+
+    // Fallback to OpenAI if RAG fails
+    const openai = getOpenAI();
+    if (!openai) {
+      throw new Error('Both RAG service and OpenAI are unavailable. Check AI services and OPENAI_API_KEY.');
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "Answer only from video content." },
+        { role: "user", content: question }
+      ]
+    });
+
+    return { answer: response.choices[0].message.content };
   }
-
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: "Answer only from video content." },
-      { role: "user", content: question }
-    ]
-  });
-
-  return { answer: response.choices[0].message.content };
 };

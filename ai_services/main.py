@@ -15,6 +15,7 @@ from ai_services.ingestion.chunker import chunk_transcript
 from ai_services.vectorestore.retriever import retrieve_top_k
 from ai_services.rag.summarizer import generate_summary
 from ai_services.rag.evaluator import evaluate_answers
+from ai_services.rag.chat import chat_with_video, ChatRequest, ChatResponse
 
 
 app = FastAPI(
@@ -184,6 +185,27 @@ def root():
 def health():
     return {"status": "healthy"}
 
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat_with_video_endpoint(request: ChatRequest):
+    """
+    Chat with a YouTube video using RAG (Retrieval-Augmented Generation)
+    """
+    try:
+        # Debug logging
+        print(f"Chat request received: {request}")
+        print(f"video_id: {request.video_id}, question: {request.question}")
+        
+        # Call the chat function (validation is automatic)
+        response = await chat_with_video(request)
+        return response
+        
+    except ValueError as ve:
+        print(f"Validation error: {ve}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        print(f"General error: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @app.post("/summarize", response_model=SummaryResponse)

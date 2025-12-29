@@ -14,8 +14,11 @@ export default function ChatBox({ initialMessages }) {
     const userMsg = { from: "user", text: question };
     setMessages((m) => [...m, userMsg]);
 
+    // Clear input immediately
+    setQuestion("");
+
     try {
-      const res = await API.post("/chat/ask", { question });
+      const res = await API.post("/chat/ask", { sessionId: "test-session-123", question });
       const bot = { from: "bot", text: res.data.answer };
       setMessages((m) => [...m, bot]);
     } catch (e) {
@@ -23,8 +26,6 @@ export default function ChatBox({ initialMessages }) {
       const bot = { from: "bot", text: "Sorry, I couldn't reach the server. Please try again later." };
       setMessages((m) => [...m, bot]);
     }
-
-    setQuestion("");
   };
 
   return (

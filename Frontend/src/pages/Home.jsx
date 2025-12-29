@@ -13,6 +13,26 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState("transcript"); // 'transcript' | 'summary'
   const [selectedTranscriptIndex, setSelectedTranscriptIndex] = useState(null);
+  const [currentVideoId, setCurrentVideoId] = useState("");
+
+  // Store video URL for chat when URL changes
+  const handleUrlChange = async (newUrl) => {
+    setUrl(newUrl);
+    if (newUrl && isValidYouTubeURL(newUrl)) {
+      try {
+        // Use existing session start endpoint to store the video URL
+        await API.post("/session/start", { videoUrl: newUrl });
+        console.log("Video URL stored for chat");
+      } catch (error) {
+        console.error("Failed to store video URL:", error);
+      }
+    }
+  };
+
+  // Simple YouTube URL validation
+  const isValidYouTubeURL = (url) => {
+    return url.includes('youtube.com/watch?v=') || url.includes('youtu.be/');
+  };
 
   // Parse quiz string format into array of objects
   const parseQuizString = (quizString) => {
@@ -84,6 +104,7 @@ export default function Home() {
       // 1. Start the session
       const startResponse = await API.post("/session/start", { videoUrl: url });
       const { sessionId, videoId } = startResponse.data;
+      setCurrentVideoId(videoId);
       // 2. Poll for transcript and summary
       const poll = async () => {
         try {
@@ -162,6 +183,7 @@ export default function Home() {
       // Start a session first to get sessionId and videoId
       const startResponse = await API.post("/session/start", { videoUrl: url });
       const { sessionId, videoId } = startResponse.data;
+      setCurrentVideoId(videoId);
 
       // Now fetch transcript with the required parameters
       const t = await fetchTranscript(sessionId, videoId);
@@ -191,6 +213,7 @@ export default function Home() {
       const startResponse = await API.post("/session/start", { videoUrl: url });
       // Get sessionId and videoId from the session start response
       const { sessionId, videoId } = startResponse.data;
+      setCurrentVideoId(videoId);
       const s = await fetchSummary(sessionId, videoId);
       if (s && s.length) {
         setSummary(s);
@@ -286,7 +309,7 @@ export default function Home() {
             </div>
 
             <div className="controls card">
-              <VideoInput url={url} setUrl={setUrl} onSummarize={handleSummarize} />
+              <VideoInput url={url} setUrl={setUrl} onSummarize={handleSummarize} onUrlChange={handleUrlChange} />
 
               <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <button type="button" className="primary-btn" onClick={handleGetTranscript}>
@@ -297,63 +320,63 @@ export default function Home() {
                 </button>
               </div>
             </div>
-            
-             <aside className="right">
-            <div className="quiz-panel card">
-              <Quiz key={questions.length} questions={questions} onGenerate={() => generateQuiz()} />
-            </div>
-          </aside>
+
+            <aside className="right">
+              <div className="quiz-panel card">
+                <Quiz key={questions.length} questions={questions} onGenerate={() => generateQuiz()} />
+              </div>
+            </aside>
           </section>
           <div className="transcript card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <h4 style={{ margin: 0 }}>About video</h4>
-                <div className="view-toggle">
-                  <button type="button"
-                    className={viewMode === 'transcript' ? 'toggle active' : 'toggle'}
-                    onClick={(e) => { e.preventDefault(); setViewMode('transcript'); setSelectedTranscriptIndex(null); }}
-                  >
-                    Transcript
-                  </button>
-                  <button type="button"
-                    className={viewMode === 'summary' ? 'toggle active' : 'toggle'}
-                    onClick={(e) => { e.preventDefault(); setViewMode('summary'); }}
-                  >
-                    Summary
-                  </button>
-                </div>
-              </div>
-
-              <div className="transcript-body">
-                {viewMode === 'transcript' ? (
-                  transcript && transcript.length > 0 ? (
-                    <>
-                      {selectedTranscriptIndex !== null && transcript[selectedTranscriptIndex] && (
-                        <div className="transcript-preview" style={{ padding: 10, marginBottom: 10, background: 'rgba(255,255,255,0.01)', borderRadius: 8 }}>
-                          <strong>{transcript[selectedTranscriptIndex].time || transcript[selectedTranscriptIndex].start || '00:00'}</strong>
-                          <div style={{ marginTop: 6 }}>{transcript[selectedTranscriptIndex].text || transcript[selectedTranscriptIndex]}</div>
-                        </div>
-                      )}
-
-                      {transcript.map((t, idx) => (
-                        <div className={`transcript-block clickable ${selectedTranscriptIndex === idx ? 'selected' : ''}`} key={idx} onClick={() => setSelectedTranscriptIndex(idx)}>
-                          <strong>{t.time || t.start || "00:00"}</strong>
-                          <p>{t.text || t}</p>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <div className="muted">Transcript will appear here after summarization.</div>
-                  )
-                ) : (
-                  summary ? (
-                    <div className="summary-text">{summary}</div>
-                  ) : (
-                    <div className="muted">Summary will appear here after generation.</div>
-                  )
-                )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h4 style={{ margin: 0 }}>About video</h4>
+              <div className="view-toggle">
+                <button type="button"
+                  className={viewMode === 'transcript' ? 'toggle active' : 'toggle'}
+                  onClick={(e) => { e.preventDefault(); setViewMode('transcript'); setSelectedTranscriptIndex(null); }}
+                >
+                  Transcript
+                </button>
+                <button type="button"
+                  className={viewMode === 'summary' ? 'toggle active' : 'toggle'}
+                  onClick={(e) => { e.preventDefault(); setViewMode('summary'); }}
+                >
+                  Summary
+                </button>
               </div>
             </div>
-         
+
+            <div className="transcript-body">
+              {viewMode === 'transcript' ? (
+                transcript && transcript.length > 0 ? (
+                  <>
+                    {selectedTranscriptIndex !== null && transcript[selectedTranscriptIndex] && (
+                      <div className="transcript-preview" style={{ padding: 10, marginBottom: 10, background: 'rgba(255,255,255,0.01)', borderRadius: 8 }}>
+                        <strong>{transcript[selectedTranscriptIndex].time || transcript[selectedTranscriptIndex].start || '00:00'}</strong>
+                        <div style={{ marginTop: 6 }}>{transcript[selectedTranscriptIndex].text || transcript[selectedTranscriptIndex]}</div>
+                      </div>
+                    )}
+
+                    {transcript.map((t, idx) => (
+                      <div className={`transcript-block clickable ${selectedTranscriptIndex === idx ? 'selected' : ''}`} key={idx} onClick={() => setSelectedTranscriptIndex(idx)}>
+                        <strong>{t.time || t.start || "00:00"}</strong>
+                        <p>{t.text || t}</p>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="muted">Transcript will appear here after summarization.</div>
+                )
+              ) : (
+                summary ? (
+                  <div className="summary-text">{summary}</div>
+                ) : (
+                  <div className="muted">Summary will appear here after generation.</div>
+                )
+              )}
+            </div>
+          </div>
+
         </main>
 
 

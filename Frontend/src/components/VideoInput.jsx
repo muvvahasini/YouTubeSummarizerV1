@@ -1,7 +1,7 @@
 import API from "../api/backend";
 import { useState, useEffect } from "react";
 
-export default function VideoForm({ url: propUrl, setUrl: propSetUrl, onProcess }) {
+export default function VideoForm({ url: propUrl, setUrl: propSetUrl, onProcess, onUrlChange }) {
   const [localUrl, setLocalUrl] = useState("");
 
   // if parent provides url/setUrl, use them; otherwise use local state
@@ -11,6 +11,14 @@ export default function VideoForm({ url: propUrl, setUrl: propSetUrl, onProcess 
   useEffect(() => {
     if (propUrl !== undefined) setLocalUrl(propUrl);
   }, [propUrl]);
+
+  const handleInputChange = (e) => {
+    const newUrl = e.target.value;
+    setUrl(newUrl);
+    if (onUrlChange) {
+      onUrlChange(newUrl);
+    }
+  };
 
   const submitVideo = async () => {
     if (onProcess) {
@@ -29,7 +37,7 @@ export default function VideoForm({ url: propUrl, setUrl: propSetUrl, onProcess 
         type="text"
         placeholder="YouTube URL"
         value={url}
-        onChange={(e) => setUrl(e.target.value)}
+        onChange={handleInputChange}
       />
       <button onClick={submitVideo}>Process Video</button>
     </div>
